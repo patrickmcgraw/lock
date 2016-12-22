@@ -1,5 +1,4 @@
 import React from 'react';
-import Debouncer from 'actions-debouncer';
 import Screen from '../../core/screen';
 import SocialButtonsPane from '../../field/social/social_buttons_pane';
 import LoginPane from '../../connection/database/login_pane';
