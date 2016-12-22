@@ -23,6 +23,10 @@ export default class Screen {
     return null;
   }
 
+  isSubmitDisabled(m) {
+    return false;
+  }
+
   renderAuxiliaryPane() {
     return null;
   }

@@ -1,12 +1,14 @@
 import React from 'react';
+import Debouncer from 'actions-debouncer';
 import Screen from '../../core/screen';
 import SocialButtonsPane from '../../field/social/social_buttons_pane';
+import { isEmail } from '../../field/email';
 import LoginPane from '../../connection/database/login_pane';
 import PaneSeparator from '../../core/pane_separator';
 import {
   databaseConnection,
-  databaseUsernameValue,
   databaseUsernameStyle,
+  databaseUsernameValue,
   defaultDatabaseConnection,
   hasInitialScreen,
   hasScreen,
@@ -36,7 +38,33 @@ import {
   useBigSocialButtons
 } from '../classic';
 import * as i18n from '../../i18n';
+import { swap, updateEntity } from '../../store/index';
+import { dataFns } from '../../utils/data_utils';
 
+const {
+  tset,
+  tremove
+} = dataFns(["core"]);
+
+const emailHrdValidationDebouncer = new Debouncer(
+  (m) => {
+    if(isEmail(databaseUsernameValue(m))
+            && !l.hasSomeConnections(m, "database")
+            && !findADConnectionWithoutDomain(m)
+            && !isSSOEnabled(m) ) {
+
+      swap(updateEntity, "lock", l.id(m), function(m) {
+        return tset(m, 'globalError', 'Please use a corporate email.');
+      });
+
+    } else if (databaseUsernameValue(m) !== "") {
+
+      swap(updateEntity, "lock", l.id(m), function(m) {
+        return tremove(m, 'globalError');
+      });
+
+    }
+  });
 
 function shouldRenderTabs(m) {
   if (isSSOEnabled(m)) return false;
@@ -87,6 +115,8 @@ const Component = ({i18n, model, t}) => {
 
   const usernameStyle = databaseUsernameStyle(model);
 
+  emailHrdValidationDebouncer.do(model)
+
   const login = (sso
     || l.hasSomeConnections(model, "database")
     || l.hasSomeConnections(model, "enterprise"))
@@ -130,6 +160,15 @@ export default class Login extends Screen {
 
   submitButtonLabel(m) {
     return i18n.str(m, ["loginSubmitLabel"]);
+  }
+
+  isSubmitDisabled(m) {
+    // it should disable the submit button if there is any connection that
+    // requires username/password and there is no enterprise with domain
+    // that matches with the email domain entered for HRD
+    return !l.hasSomeConnections(m, "database") // no database connection
+            && !findADConnectionWithoutDomain(m) // no enterprise without domain
+            && !isSSOEnabled(m); // no matching domain
   }
 
   submitHandler(model) {
