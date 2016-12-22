@@ -2,7 +2,6 @@ import React from 'react';
 import Debouncer from 'actions-debouncer';
 import Screen from '../../core/screen';
 import SocialButtonsPane from '../../field/social/social_buttons_pane';
-import { isEmail } from '../../field/email';
 import LoginPane from '../../connection/database/login_pane';
 import PaneSeparator from '../../core/pane_separator';
 import {
@@ -29,7 +28,8 @@ import {
   defaultEnterpriseConnectionName,
   findADConnectionWithoutDomain,
   isEnterpriseDomain,
-  isHRDDomain
+  isHRDDomain,
+  debouncedVerifyHRDEmail
 } from '../../connection/enterprise';
 import SingleSignOnNotice from '../../connection/enterprise/single_sign_on_notice';
 import {
@@ -38,33 +38,6 @@ import {
   useBigSocialButtons
 } from '../classic';
 import * as i18n from '../../i18n';
-import { swap, updateEntity } from '../../store/index';
-import { dataFns } from '../../utils/data_utils';
-
-const {
-  tset,
-  tremove
-} = dataFns(["core"]);
-
-const emailHrdValidationDebouncer = new Debouncer(
-  (m) => {
-    if(isEmail(databaseUsernameValue(m))
-            && !l.hasSomeConnections(m, "database")
-            && !findADConnectionWithoutDomain(m)
-            && !isSSOEnabled(m) ) {
-
-      swap(updateEntity, "lock", l.id(m), function(m) {
-        return tset(m, 'globalError', 'Please use a corporate email.');
-      });
-
-    } else if (databaseUsernameValue(m) !== "") {
-
-      swap(updateEntity, "lock", l.id(m), function(m) {
-        return tremove(m, 'globalError');
-      });
-
-    }
-  });
 
 function shouldRenderTabs(m) {
   if (isSSOEnabled(m)) return false;
@@ -115,7 +88,7 @@ const Component = ({i18n, model, t}) => {
 
   const usernameStyle = databaseUsernameStyle(model);
 
-  emailHrdValidationDebouncer.do(model)
+  debouncedVerifyHRDEmail(model);
 
   const login = (sso
     || l.hasSomeConnections(model, "database")

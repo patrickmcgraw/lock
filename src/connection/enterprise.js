@@ -1,12 +1,19 @@
 import Immutable, { List } from 'immutable';
+import * as f from '../utils/fn_utils';
 import * as l from '../core/index';
 import * as c from '../field/index';
 import { dataFns } from '../utils/data_utils';
 import { emailDomain, emailLocalPart } from '../field/email';
 import { setUsername } from '../field/username';
 import { getFieldValue } from '../field/index';
+import { isEmail } from '../field/email';
+import { isSSOEnabled } from '../engine/classic';
+import { databaseUsernameValue } from './database/index';
+
+import { swap, updateEntity } from '../store/index';
 
 const { get, initNS, tget, tremove, tset } = dataFns(["enterprise"]);
+const { tremove: tremoveCore, tset: tsetCore } = dataFns(["core"]);
 
 // TODO: Android version also has "google-opendid" in the list, but we
 // consider it to be a social connection. See
@@ -145,3 +152,23 @@ export function toggleHRD(m, email) {
 export function isHRDActive(m) {
   return tget(m, "hrd", isSingleHRDConnection(m));
 }
+
+export function verifyHRDEmail(m) {
+  if(isEmail(databaseUsernameValue(m))
+          && !l.hasSomeConnections(m, "database")
+          && !findADConnectionWithoutDomain(m)
+          && !isSSOEnabled(m) ) {
+
+    swap(updateEntity, "lock", l.id(m), function(m) {
+      return tsetCore(m, 'globalError', 'Please use a corporate email.');
+    });
+
+  } else if (databaseUsernameValue(m) !== "") {
+
+    swap(updateEntity, "lock", l.id(m), function(m) {
+      return tremoveCore(m, 'globalError');
+    });
+  }
+}
+
+export const debouncedVerifyHRDEmail = f.debounce(verifyHRDEmail, 300);
