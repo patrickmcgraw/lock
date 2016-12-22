@@ -15,6 +15,8 @@ import * as l from './core/index';
 import * as c from './field/index';
 import * as idu from './utils/id_utils';
 import * as i18n from './i18n';
+import { isSSOEnabled } from './engine/classic';
+import { findADConnectionWithoutDomain } from './connection/enterprise';
 
 import { go } from './sync';
 
@@ -63,8 +65,18 @@ export default class Base extends EventEmitter {
       if (l.rendering(m)) {
         const screen = this.engine.render(m);
 
-        const disableSubmitButton = screen.name === "main.signUp"
-          && !termsAccepted(m);
+        let disableSubmitButton = false;
+
+        if (screen.name === "main.signUp") {
+          disableSubmitButton = !termsAccepted(m)
+        } else if (screen.name === "main.login") {
+          // it should disable the submit button if there is any connection that
+          // requires username/password and there is no enterprise with domain
+          // that matches with the email domain entered for HRD
+          disableSubmitButton = !l.hasSomeConnections(m, "database")
+            && !findADConnectionWithoutDomain(m)
+            && !isSSOEnabled(m);
+        }
 
         const i18nProp = {
           group: keyPath => i18n.group(m, keyPath),
