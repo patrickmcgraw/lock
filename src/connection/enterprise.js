@@ -13,7 +13,7 @@ import { databaseUsernameValue } from './database/index';
 import { swap, updateEntity } from '../store/index';
 
 const { get, initNS, tget, tremove, tset } = dataFns(["enterprise"]);
-const { tremove: tremoveCore, tset: tsetCore } = dataFns(["core"]);
+const { tremove: tremoveCore, tset: tsetCore, tget: tgetCore } = dataFns(["core"]);
 
 // TODO: Android version also has "google-opendid" in the list, but we
 // consider it to be a social connection. See
@@ -160,12 +160,15 @@ export function verifyHRDEmail(m) {
           && !isSSOEnabled(m) ) {
 
     swap(updateEntity, "lock", l.id(m), function(m) {
+      m = tsetCore(m, 'hrdEmailError', true);
       return tsetCore(m, 'globalError', 'Please use a corporate email.');
     });
 
-  } else if (databaseUsernameValue(m) !== "") {
+  } else if (databaseUsernameValue(m) !== "" && tgetCore(m, 'hrdEmailError')) {
 
     swap(updateEntity, "lock", l.id(m), function(m) {
+      m = tsetCore(m, 'globalError', 'Please use a corporate email.');
+      m = tsetCore(m, 'hrdEmailError', false);
       return tremoveCore(m, 'globalError');
     });
   }
