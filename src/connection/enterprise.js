@@ -9,6 +9,7 @@ import { getFieldValue } from '../field/index';
 import { isEmail } from '../field/email';
 import { isSSOEnabled } from '../engine/classic';
 import { databaseUsernameValue } from './database/index';
+import * as i18n from '../i18n';
 
 import { swap, updateEntity } from '../store/index';
 
@@ -161,13 +162,13 @@ export function verifyHRDEmail(m) {
 
     swap(updateEntity, "lock", l.id(m), function(m) {
       m = tsetCore(m, 'hrdEmailError', true);
-      return tsetCore(m, 'globalError', 'Please use a corporate email.');
+      const errorMessage = i18n.str(m, ["error", "login", "hrd.not_matching_email"]);
+      return tsetCore(m, 'globalError', errorMessage);
     });
 
   } else if (databaseUsernameValue(m) !== "" && tgetCore(m, 'hrdEmailError')) {
 
     swap(updateEntity, "lock", l.id(m), function(m) {
-      m = tsetCore(m, 'globalError', 'Please use a corporate email.');
       m = tsetCore(m, 'hrdEmailError', false);
       return tremoveCore(m, 'globalError');
     });
